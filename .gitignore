@@ -13,3 +13,6 @@ htmlcov/
 *.log
 .DS_Store
 .superpowers/
+docker-compose.override.yml
+.env.local
+.env.*.local
