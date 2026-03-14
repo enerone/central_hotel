@@ -1,6 +1,7 @@
 services:
   app:
     build: .
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     ports:
       - "8000:8000"
     volumes:
@@ -38,8 +39,10 @@ services:
     command: celery -A app.core.celery_app worker --loglevel=info
     env_file: .env
     depends_on:
-      - db
-      - redis
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
 
   nginx:
     image: nginx:alpine
