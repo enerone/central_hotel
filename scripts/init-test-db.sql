@@ -1,0 +1,2 @@
+CREATE DATABASE hotel_test;
+GRANT ALL PRIVILEGES ON DATABASE hotel_test TO hotel;
