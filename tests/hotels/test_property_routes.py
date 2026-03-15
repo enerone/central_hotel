@@ -139,3 +139,49 @@ async def test_delete_property(async_client, db_session):
     )
     assert response.status_code == 303
     assert response.headers["location"] == "/dashboard/properties"
+
+
+async def test_update_property_route(async_client, db_session):
+    user = make_user(email="update_route@example.com")
+    db_session.add(user)
+    await db_session.flush()
+    await async_client.post(
+        "/login",
+        data={"email": "update_route@example.com", "password": "password123"},
+        follow_redirects=False,
+    )
+
+    prop = make_property(user_id=user.id, slug="update-route-hotel")
+    db_session.add(prop)
+    await db_session.flush()
+
+    response = await async_client.post(
+        f"/dashboard/properties/{prop.id}/edit",
+        data={"name": "Updated Name", "is_published": "1"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert f"/dashboard/properties/{prop.id}/edit" in response.headers["location"]
+
+
+async def test_update_property_route_other_user_returns_404(async_client, db_session):
+    owner = make_user(email="real_owner2@example.com")
+    other = make_user(email="other_user2@example.com")
+    db_session.add_all([owner, other])
+    await db_session.flush()
+
+    prop = make_property(user_id=owner.id, slug="not-yours-post")
+    db_session.add(prop)
+    await db_session.flush()
+
+    await async_client.post(
+        "/login",
+        data={"email": "other_user2@example.com", "password": "password123"},
+        follow_redirects=False,
+    )
+
+    response = await async_client.post(
+        f"/dashboard/properties/{prop.id}/edit",
+        data={"name": "Hacked"},
+    )
+    assert response.status_code == 404

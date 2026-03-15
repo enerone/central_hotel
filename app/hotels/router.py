@@ -120,33 +120,30 @@ async def edit_property_page(
 @router.post("/dashboard/properties/{id}/edit", response_class=HTMLResponse)
 async def update_property_route(
     request: Request,
-    id: uuid.UUID,
+    prop: Property = Depends(_get_property_or_404),
     name: str = Form(None),
     description_es: str = Form(None),
     description_en: str = Form(None),
-    address: str = Form(None),
-    city: str = Form(None),
-    country: str = Form(None),
+    address: str | None = Form(None),
+    city: str | None = Form(None),
+    country: str | None = Form(None),
     currency: str = Form(None),
     locale: str = Form(None),
     is_published: str = Form(None),
     db: AsyncSession = Depends(get_db),
     user: User = Depends(require_auth),
 ):
-    prop = await get_property_by_id(db, id)
-    if not prop or prop.user_id != user.id:
-        raise HTTPException(status_code=404)
-
+    id = prop.id
     form = PropertyUpdate(
         name=name or None,
         description_es=description_es,
         description_en=description_en,
-        address=address or None,
-        city=city or None,
-        country=country or None,
+        address=address,
+        city=city,
+        country=country,
         currency=currency or None,
         locale=locale or None,
-        is_published=is_published == "1" if is_published is not None else None,
+        is_published=None if is_published is None else (is_published == "1"),
     )
     await update_property(db, prop, form)
     return RedirectResponse(url=f"/dashboard/properties/{id}/edit", status_code=303)
@@ -154,12 +151,9 @@ async def update_property_route(
 
 @router.post("/dashboard/properties/{id}/delete")
 async def delete_property_route(
-    id: uuid.UUID,
+    prop: Property = Depends(_get_property_or_404),
     db: AsyncSession = Depends(get_db),
     user: User = Depends(require_auth),
 ):
-    prop = await get_property_by_id(db, id)
-    if not prop or prop.user_id != user.id:
-        raise HTTPException(status_code=404)
     await delete_property(db, prop)
     return RedirectResponse(url="/dashboard/properties", status_code=303)

@@ -87,11 +87,11 @@ async def update_property(
             desc["en"] = form.description_en
         prop.description = desc
     if form.address is not None:
-        prop.address = form.address
+        prop.address = form.address or None   # empty string → None
     if form.city is not None:
-        prop.city = form.city
+        prop.city = form.city or None
     if form.country is not None:
-        prop.country = form.country
+        prop.country = form.country or None
     if form.currency is not None:
         prop.currency = form.currency
     if form.locale is not None:
