@@ -1,0 +1,6 @@
+# Central model registry.
+# Import every model module here so that:
+#   1. tests/conftest.py picks them up for Base.metadata.create_all
+#   2. alembic/env.py picks them up for autogenerate
+# Add one line per plan as new models are created.
+from app.auth.models import User  # noqa: F401

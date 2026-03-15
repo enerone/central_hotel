@@ -9,8 +9,9 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 from app.core.base import Base
 from app.core.config import settings
 
-# Import all models here so Alembic can detect them
-# (models will be imported as they are created in later plans)
+# Import all models so Alembic autogenerate can detect them.
+# app/models.py is the central registry — add new model imports there.
+import app.models  # noqa: F401
 
 config = context.config
 config.set_main_option("sqlalchemy.url", settings.database_url_sync)
