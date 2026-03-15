@@ -3,7 +3,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app.hotels.models import Property, Room
 from tests.auth.factories import make_user
-from tests.hotels.factories import make_property, make_room
+from tests.hotels.factories import make_property, make_promotion, make_room, make_service
 
 
 async def test_create_property(db_session):
@@ -51,3 +51,66 @@ async def test_create_room(db_session):
     assert room.id is not None
     assert room.property_id == prop.id
     assert room.is_active is True
+
+
+async def test_create_service(db_session):
+    user = make_user(email="owner4@example.com")
+    db_session.add(user)
+    await db_session.flush()
+
+    prop = make_property(user_id=user.id, slug="service-hotel")
+    db_session.add(prop)
+    await db_session.flush()
+
+    svc = make_service(property_id=prop.id)
+    db_session.add(svc)
+    await db_session.flush()
+
+    assert svc.id is not None
+    assert svc.property_id == prop.id
+    assert svc.is_active is True
+
+
+async def test_create_promotion(db_session):
+    user = make_user(email="owner5@example.com")
+    db_session.add(user)
+    await db_session.flush()
+
+    prop = make_property(user_id=user.id, slug="promo-hotel")
+    db_session.add(prop)
+    await db_session.flush()
+
+    promo = make_promotion(property_id=prop.id)
+    db_session.add(promo)
+    await db_session.flush()
+
+    assert promo.id is not None
+    assert promo.discount_type == "percent"
+    assert promo.min_nights == 2
+
+
+async def test_room_availability_unique_constraint(db_session):
+    from datetime import date
+
+    from app.hotels.models import RoomAvailability
+    from tests.hotels.factories import make_room, make_property
+    from tests.auth.factories import make_user
+
+    user = make_user(email="owner6@example.com")
+    db_session.add(user)
+    await db_session.flush()
+
+    prop = make_property(user_id=user.id, slug="avail-hotel")
+    db_session.add(prop)
+    await db_session.flush()
+
+    room = make_room(property_id=prop.id)
+    db_session.add(room)
+    await db_session.flush()
+
+    avail1 = RoomAvailability(room_id=room.id, date=date(2026, 6, 1), is_blocked=True)
+    avail2 = RoomAvailability(room_id=room.id, date=date(2026, 6, 1), is_blocked=False)
+    db_session.add(avail1)
+    db_session.add(avail2)
+    with pytest.raises(IntegrityError):
+        await db_session.flush()

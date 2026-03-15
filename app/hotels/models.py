@@ -5,6 +5,7 @@ from typing import Any
 
 from sqlalchemy import (
     Boolean,
+    CheckConstraint,
     Date,
     ForeignKey,
     Integer,
@@ -27,9 +28,9 @@ class Property(Base, UUIDMixin, TimestampMixin):
     slug: Mapped[str] = mapped_column(String(100), unique=True, nullable=False, index=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
-    address: Mapped[str | None] = mapped_column(String(500), nullable=True)
-    city: Mapped[str | None] = mapped_column(String(100), nullable=True)
-    country: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    address: Mapped[str | None] = mapped_column(String(500))
+    city: Mapped[str | None] = mapped_column(String(100))
+    country: Mapped[str | None] = mapped_column(String(100))
     currency: Mapped[str] = mapped_column(String(3), default="USD", nullable=False)
     locale: Mapped[str] = mapped_column(String(5), default="es", nullable=False)
     is_published: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
@@ -62,7 +63,7 @@ class RoomAvailability(Base):
     )
     date: Mapped[date] = mapped_column(Date, nullable=False)
     is_blocked: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    override_price: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True)
+    override_price: Mapped[Decimal | None] = mapped_column(Numeric(10, 2))
 
 
 class Service(Base, UUIDMixin, TimestampMixin):
@@ -82,6 +83,9 @@ class Service(Base, UUIDMixin, TimestampMixin):
 
 class Promotion(Base, UUIDMixin, TimestampMixin):
     __tablename__ = "promotions"
+    __table_args__ = (
+        CheckConstraint("discount_type IN ('percent', 'fixed')", name="ck_promotions_discount_type"),
+    )
 
     property_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("properties.id", ondelete="CASCADE"), nullable=False, index=True

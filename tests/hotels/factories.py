@@ -1,15 +1,14 @@
 import uuid
 from decimal import Decimal
 
-from app.hotels.models import Promotion, Room, Service
-from app.hotels.models import Property
+from app.hotels.models import Promotion, Property, Room, Service
 
 
 def make_property(user_id: uuid.UUID, **kwargs) -> Property:
     """Return an unsaved Property with sensible defaults."""
     defaults = {
         "user_id": user_id,
-        "slug": "test-hotel",
+        "slug": f"test-hotel-{uuid.uuid4().hex[:8]}",
         "name": "Test Hotel",
         "description": {"es": "Descripción de prueba", "en": "Test description"},
         "city": "Buenos Aires",
