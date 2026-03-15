@@ -1,7 +1,8 @@
 import pytest
+from datetime import date
 from sqlalchemy.exc import IntegrityError
 
-from app.hotels.models import Property, Room
+from app.hotels.models import Property, Room, RoomAvailability
 from tests.auth.factories import make_user
 from tests.hotels.factories import make_property, make_promotion, make_room, make_service
 
@@ -90,12 +91,6 @@ async def test_create_promotion(db_session):
 
 
 async def test_room_availability_unique_constraint(db_session):
-    from datetime import date
-
-    from app.hotels.models import RoomAvailability
-    from tests.hotels.factories import make_room, make_property
-    from tests.auth.factories import make_user
-
     user = make_user(email="owner6@example.com")
     db_session.add(user)
     await db_session.flush()
