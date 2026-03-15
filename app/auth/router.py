@@ -1,3 +1,5 @@
+import logging
+
 from authlib.integrations.starlette_client import OAuth
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -9,6 +11,8 @@ from app.auth.service import authenticate_user, create_user, get_or_create_oauth
 from app.core.config import settings
 from app.core.database import get_db
 from app.core.templates import templates
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -111,7 +115,8 @@ async def google_callback(
 ):
     try:
         token = await oauth.google.authorize_access_token(request)
-    except Exception:
+    except Exception as exc:
+        logger.warning("Google OAuth error: %s", exc, exc_info=True)
         return RedirectResponse(url="/login?error=oauth_failed", status_code=303)
 
     user_info = token.get("userinfo")
