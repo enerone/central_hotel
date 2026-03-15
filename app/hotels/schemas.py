@@ -43,6 +43,13 @@ class PropertyUpdate(BaseModel):
     locale: str | None = None
     is_published: bool | None = None
 
+    @field_validator("currency")
+    @classmethod
+    def currency_uppercase(cls, v: str | None) -> str | None:
+        if v is None:
+            return v
+        return v.upper()[:3]
+
 
 class RoomCreate(BaseModel):
     name_es: str
@@ -77,6 +84,20 @@ class RoomUpdate(BaseModel):
     base_price: Decimal | None = None
     amenities: list[str] | None = None
     is_active: bool | None = None
+
+    @field_validator("capacity")
+    @classmethod
+    def capacity_positive(cls, v: int | None) -> int | None:
+        if v is not None and v < 1:
+            raise ValueError("La capacidad debe ser al menos 1")
+        return v
+
+    @field_validator("base_price")
+    @classmethod
+    def price_non_negative(cls, v: Decimal | None) -> Decimal | None:
+        if v is not None and v < 0:
+            raise ValueError("El precio no puede ser negativo")
+        return v
 
 
 class ServiceCreate(BaseModel):

@@ -1,4 +1,6 @@
+import copy
 import uuid
+from calendar import monthrange
 from datetime import date
 from decimal import Decimal
 
@@ -44,7 +46,7 @@ async def create_property(
         country=form.country,
         currency=form.currency,
         locale=form.locale,
-        widget_config=dict(_DEFAULT_WIDGET_CONFIG),
+        widget_config=copy.deepcopy(_DEFAULT_WIDGET_CONFIG),
     )
     db.add(prop)
     await db.flush()
@@ -77,13 +79,12 @@ async def update_property(
 ) -> Property:
     if form.name is not None:
         prop.name = form.name
-    if form.description_es is not None:
+    if form.description_es is not None or form.description_en is not None:
         desc = dict(prop.description)
-        desc["es"] = form.description_es
-        prop.description = desc
-    if form.description_en is not None:
-        desc = dict(prop.description)
-        desc["en"] = form.description_en
+        if form.description_es is not None:
+            desc["es"] = form.description_es
+        if form.description_en is not None:
+            desc["en"] = form.description_en
         prop.description = desc
     if form.address is not None:
         prop.address = form.address
@@ -92,7 +93,7 @@ async def update_property(
     if form.country is not None:
         prop.country = form.country
     if form.currency is not None:
-        prop.currency = form.currency.upper()[:3]
+        prop.currency = form.currency
     if form.locale is not None:
         prop.locale = form.locale
     if form.is_published is not None:
@@ -140,21 +141,19 @@ async def get_room_by_id(db: AsyncSession, room_id: uuid.UUID) -> Room | None:
 
 
 async def update_room(db: AsyncSession, room: Room, form: RoomUpdate) -> Room:
-    if form.name_es is not None:
+    if form.name_es is not None or form.name_en is not None:
         name = dict(room.name)
-        name["es"] = form.name_es
+        if form.name_es is not None:
+            name["es"] = form.name_es
+        if form.name_en is not None:
+            name["en"] = form.name_en
         room.name = name
-    if form.name_en is not None:
-        name = dict(room.name)
-        name["en"] = form.name_en
-        room.name = name
-    if form.description_es is not None:
+    if form.description_es is not None or form.description_en is not None:
         desc = dict(room.description)
-        desc["es"] = form.description_es
-        room.description = desc
-    if form.description_en is not None:
-        desc = dict(room.description)
-        desc["en"] = form.description_en
+        if form.description_es is not None:
+            desc["es"] = form.description_es
+        if form.description_en is not None:
+            desc["en"] = form.description_en
         room.description = desc
     if form.capacity is not None:
         room.capacity = form.capacity
@@ -274,11 +273,8 @@ async def get_availability_for_month(
     db: AsyncSession, room_id: uuid.UUID, year: int, month: int
 ) -> list[RoomAvailability]:
     """Return all RoomAvailability records for the given room and calendar month."""
-    from calendar import monthrange
-    from datetime import date as date_type
-
-    first_day = date_type(year, month, 1)
-    last_day = date_type(year, month, monthrange(year, month)[1])
+    first_day = date(year, month, 1)
+    last_day = date(year, month, monthrange(year, month)[1])
     result = await db.execute(
         select(RoomAvailability)
         .where(
@@ -295,6 +291,8 @@ async def get_blocked_dates_in_range(
     db: AsyncSession, room_id: uuid.UUID, start_date: date, end_date: date
 ) -> list[date]:
     """Return list of dates in [start_date, end_date) that are manually blocked.
+    The range is half-open: start_date is inclusive, end_date is exclusive.
+    For bookings: pass check_in as start_date, check_out as end_date.
     Used by Plan 5 (bookings) to check availability.
     """
     result = await db.execute(

@@ -6,6 +6,7 @@ from app.hotels.schemas import (
     PropertyCreate,
     PropertyUpdate,
     RoomCreate,
+    RoomUpdate,
     ServiceCreate,
     PromotionCreate,
 )
@@ -26,6 +27,7 @@ from app.hotels.service import (
     delete_service_item,
     create_promotion,
     get_promotions_by_property,
+    delete_promotion,
     upsert_availability,
     get_availability_for_month,
     get_blocked_dates_in_range,
@@ -184,6 +186,7 @@ async def test_upsert_availability_and_get_blocked_dates(db_session):
     # Block two dates
     await upsert_availability(db_session, room.id, date(2026, 6, 10), is_blocked=True)
     await upsert_availability(db_session, room.id, date(2026, 6, 11), is_blocked=True)
+    await db_session.flush()
 
     blocked = await get_blocked_dates_in_range(
         db_session, room.id, date(2026, 6, 1), date(2026, 6, 30)
@@ -210,8 +213,54 @@ async def test_upsert_availability_updates_existing(db_session):
     await upsert_availability(db_session, room.id, avail_date, is_blocked=True)
     # Upsert again to unblock
     await upsert_availability(db_session, room.id, avail_date, is_blocked=False)
+    await db_session.flush()
 
     blocked = await get_blocked_dates_in_range(
         db_session, room.id, date(2026, 7, 1), date(2026, 7, 31)
     )
     assert avail_date not in blocked
+
+
+async def test_update_room(db_session):
+    user = make_user(email="room_upd_owner@example.com")
+    db_session.add(user)
+    await db_session.flush()
+
+    prop = make_property(user_id=user.id, slug="upd-room-hotel")
+    db_session.add(prop)
+    await db_session.flush()
+
+    room = make_room(property_id=prop.id)
+    db_session.add(room)
+    await db_session.flush()
+
+    form = RoomUpdate(name_es="Suite actualizada", name_en="Updated suite", capacity=4)
+    updated = await update_room(db_session, room, form)
+
+    assert updated.name == {"es": "Suite actualizada", "en": "Updated suite"}
+    assert updated.capacity == 4
+
+
+async def test_delete_promotion(db_session):
+    user = make_user(email="promo_del_owner@example.com")
+    db_session.add(user)
+    await db_session.flush()
+
+    prop = make_property(user_id=user.id, slug="promo-del-hotel")
+    db_session.add(prop)
+    await db_session.flush()
+
+    form = PromotionCreate(
+        name_es="Promo a borrar",
+        discount_type="fixed",
+        discount_value=Decimal("20.00"),
+        valid_from=date(2026, 1, 1),
+        valid_until=date(2026, 6, 30),
+    )
+    promo = await create_promotion(db_session, prop.id, form)
+    await db_session.flush()
+
+    await delete_promotion(db_session, promo)
+
+    promos = await get_promotions_by_property(db_session, prop.id)
+    assert len(promos) == 0
