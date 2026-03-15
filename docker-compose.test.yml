@@ -7,6 +7,10 @@ services:
     environment:
       APP_ENV: test
 
+  db:
+    environment:
+      POSTGRES_MULTIPLE_DATABASES: hotel,hotel_test
+
   nginx:
     profiles:
       - disabled

@@ -21,6 +21,7 @@ services:
       POSTGRES_DB: hotel
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./scripts/create-multiple-dbs.sh:/docker-entrypoint-initdb.d/create-multiple-dbs.sh
     ports:
       - "5432:5432"
     healthcheck:
