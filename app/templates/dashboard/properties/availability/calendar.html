@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}Disponibilidad — {{ prop.name }} — Sistema Hotel{% endblock %}
+{% block content %}
+<div class="p-8">
+  <a href="/dashboard/properties/{{ prop.id }}/rooms" class="text-sm text-gray-500 hover:underline">← Habitaciones</a>
+  <h1 class="text-2xl font-bold mt-2 mb-2">Disponibilidad — {{ prop.name }}</h1>
+
+  {% if not rooms %}
+  <p class="text-gray-500">No hay habitaciones. <a href="/dashboard/properties/{{ prop.id }}/rooms/new" class="text-blue-600 hover:underline">Crear una</a>.</p>
+  {% else %}
+  <div class="mb-4 flex gap-4 items-end">
+    <div>
+      <label class="block text-sm font-medium mb-1">Habitación</label>
+      <select id="room-select" onchange="location.href='/dashboard/properties/{{ prop.id }}/availability?room_id='+this.value+'&year={{ year }}&month={{ month }}'"
+              class="border rounded px-3 py-2 text-sm">
+        {% for r in rooms %}
+        <option value="{{ r.id }}" {{ 'selected' if r.id == selected_room_id else '' }}>
+          {{ r.name.get('es', '') }}
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label class="block text-sm font-medium mb-1">Mes</label>
+      <div class="flex gap-2">
+        <a href="?room_id={{ selected_room_id }}&year={{ prev_year }}&month={{ prev_month }}"
+           class="border rounded px-3 py-2 text-sm hover:bg-gray-50">←</a>
+        <span class="border rounded px-3 py-2 text-sm bg-white">{{ month_name }} {{ year }}</span>
+        <a href="?room_id={{ selected_room_id }}&year={{ next_year }}&month={{ next_month }}"
+           class="border rounded px-3 py-2 text-sm hover:bg-gray-50">→</a>
+      </div>
+    </div>
+  </div>
+
+  {% if selected_room_id %}
+  <form method="post" action="/dashboard/properties/{{ prop.id }}/availability">
+    <input type="hidden" name="room_id" value="{{ selected_room_id }}">
+    <input type="hidden" name="year" value="{{ year }}">
+    <input type="hidden" name="month" value="{{ month }}">
+    <div class="bg-white rounded-xl shadow p-4 mb-4">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="text-gray-500">
+            {% for day_name in ['Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sá', 'Do'] %}
+            <th class="py-2 text-center font-medium">{{ day_name }}</th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for week in calendar_weeks %}
+          <tr>
+            {% for day in week %}
+            <td class="py-1 text-center">
+              {% if day %}
+              <label class="block cursor-pointer">
+                <input type="checkbox" name="blocked_dates" value="{{ day.date_str }}"
+                       {{ 'checked' if day.is_blocked else '' }}
+                       class="sr-only peer">
+                <span class="inline-block w-8 h-8 rounded-full flex items-center justify-center text-xs
+                             peer-checked:bg-red-500 peer-checked:text-white
+                             hover:bg-gray-100">
+                  {{ day.day }}
+                </span>
+              </label>
+              {% endif %}
+            </td>
+            {% endfor %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <p class="text-xs text-gray-500 mb-3">Las fechas marcadas en rojo quedarán bloqueadas.</p>
+    <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 font-medium">
+      Guardar disponibilidad
+    </button>
+  </form>
+  {% endif %}
+  {% endif %}
+</div>
+{% endblock %}
