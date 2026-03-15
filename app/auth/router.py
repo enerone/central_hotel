@@ -3,7 +3,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.schemas import RegisterForm
+from app.auth.schemas import LoginForm, RegisterForm
 from app.auth.service import authenticate_user, create_user, get_user_by_email
 from app.core.database import get_db
 from app.core.templates import templates
@@ -13,10 +13,10 @@ router = APIRouter()
 
 @router.get("/register", response_class=HTMLResponse)
 async def register_page(request: Request):
-    return templates.TemplateResponse("auth/register.html", {"request": request})
+    return templates.TemplateResponse(request, "auth/register.html", {})
 
 
-@router.post("/register")
+@router.post("/register", response_class=HTMLResponse)
 async def register(
     request: Request,
     email: str = Form(...),
@@ -27,8 +27,9 @@ async def register(
     existing = await get_user_by_email(db, email)
     if existing:
         return templates.TemplateResponse(
+            request,
             "auth/register.html",
-            {"request": request, "error": "Email ya registrado"},
+            {"error": "Email ya registrado"},
             status_code=400,
         )
     try:
@@ -36,33 +37,44 @@ async def register(
     except ValidationError as e:
         error_msg = e.errors()[0]["msg"] if e.errors() else "Datos inválidos"
         return templates.TemplateResponse(
+            request,
             "auth/register.html",
-            {"request": request, "error": error_msg},
+            {"error": error_msg},
             status_code=422,
         )
     user = await create_user(db, form)
-    await db.commit()
     request.session["user_id"] = str(user.id)
     return RedirectResponse(url="/dashboard", status_code=303)
 
 
 @router.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request):
-    return templates.TemplateResponse("auth/login.html", {"request": request})
+    return templates.TemplateResponse(request, "auth/login.html", {})
 
 
-@router.post("/login")
+@router.post("/login", response_class=HTMLResponse)
 async def login(
     request: Request,
     email: str = Form(...),
     password: str = Form(...),
     db: AsyncSession = Depends(get_db),
 ):
-    user = await authenticate_user(db, email, password)
+    try:
+        form = LoginForm(email=email, password=password)
+    except ValidationError as e:
+        error_msg = e.errors()[0]["msg"] if e.errors() else "Datos inválidos"
+        return templates.TemplateResponse(
+            request,
+            "auth/login.html",
+            {"error": error_msg},
+            status_code=422,
+        )
+    user = await authenticate_user(db, form.email, form.password)
     if not user:
         return templates.TemplateResponse(
+            request,
             "auth/login.html",
-            {"request": request, "error": "Email o contraseña inválidos"},
+            {"error": "Email o contraseña inválidos"},
             status_code=401,
         )
     request.session["user_id"] = str(user.id)
