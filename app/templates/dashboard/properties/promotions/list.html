@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Promociones — {{ prop.name }} — Sistema Hotel{% endblock %}
+{% block content %}
+<div class="p-8">
+  <a href="/dashboard/properties" class="text-sm text-gray-500 hover:underline">← Propiedades</a>
+  <h1 class="text-2xl font-bold mt-2 mb-6">Promociones — {{ prop.name }}</h1>
+  {% if error %}
+  <div class="bg-red-50 border border-red-200 text-red-700 rounded p-3 mb-4 text-sm">{{ error }}</div>
+  {% endif %}
+  <div class="grid grid-cols-2 gap-8">
+    <div>
+      <h2 class="font-semibold mb-4">Promociones activas</h2>
+      {% if promotions %}
+      <div class="space-y-3">
+        {% for promo in promotions %}
+        <div class="bg-white rounded-lg shadow p-4 flex justify-between items-center">
+          <div>
+            <p class="font-medium">{{ promo.name.get('es', '') }}</p>
+            <p class="text-sm text-gray-500">
+              {{ promo.discount_value }}{{ '%' if promo.discount_type == 'percent' else (' ' ~ prop.currency) }} ·
+              Mín. {{ promo.min_nights }} noches ·
+              {{ promo.valid_from }} – {{ promo.valid_until }}
+            </p>
+          </div>
+          <form method="post" action="/dashboard/properties/{{ prop.id }}/promotions/{{ promo.id }}/delete">
+            <button class="text-red-500 text-xs hover:underline">Eliminar</button>
+          </form>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="text-gray-500 text-sm">No hay promociones aún.</p>
+      {% endif %}
+    </div>
+    <div>
+      <h2 class="font-semibold mb-4">Agregar promoción</h2>
+      <form method="post" action="/dashboard/properties/{{ prop.id }}/promotions/new" class="bg-white rounded-lg shadow p-4">
+        <div class="mb-3">
+          <label class="block text-sm font-medium mb-1">Nombre (Español)</label>
+          <input type="text" name="name_es" required class="w-full border rounded px-3 py-2 text-sm">
+        </div>
+        <div class="mb-3">
+          <label class="block text-sm font-medium mb-1">Tipo de descuento</label>
+          <select name="discount_type" class="w-full border rounded px-3 py-2 text-sm">
+            <option value="percent">Porcentaje (%)</option>
+            <option value="fixed">Monto fijo</option>
+          </select>
+        </div>
+        <div class="mb-3">
+          <label class="block text-sm font-medium mb-1">Valor del descuento</label>
+          <input type="number" name="discount_value" step="0.01" min="0" required class="w-full border rounded px-3 py-2 text-sm">
+        </div>
+        <div class="grid grid-cols-2 gap-3 mb-3">
+          <div>
+            <label class="block text-sm font-medium mb-1">Válido desde</label>
+            <input type="date" name="valid_from" required class="w-full border rounded px-3 py-2 text-sm">
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-1">Válido hasta</label>
+            <input type="date" name="valid_until" required class="w-full border rounded px-3 py-2 text-sm">
+          </div>
+        </div>
+        <div class="mb-4">
+          <label class="block text-sm font-medium mb-1">Mínimo de noches</label>
+          <input type="number" name="min_nights" min="1" value="1" class="w-full border rounded px-3 py-2 text-sm">
+        </div>
+        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700">
+          Agregar promoción
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

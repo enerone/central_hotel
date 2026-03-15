@@ -1,29 +1,47 @@
+import calendar as calendar_module
 import uuid
+from datetime import date
 from decimal import Decimal, InvalidOperation
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from pydantic import ValidationError
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import require_auth
 from app.auth.models import User
 from app.core.database import get_db
 from app.core.templates import templates
-from app.hotels.models import Property, Room
-from app.hotels.schemas import PropertyCreate, PropertyUpdate, RoomCreate, RoomUpdate
+from app.hotels.models import Promotion, Property, Room, Service
+from app.hotels.schemas import (
+    PromotionCreate,
+    PropertyCreate,
+    PropertyUpdate,
+    RoomCreate,
+    RoomUpdate,
+    ServiceCreate,
+)
 from app.hotels.service import (
+    create_promotion,
     create_property,
+    create_room,
+    create_service,
+    delete_promotion,
     delete_property,
+    delete_room,
+    delete_service_item,
+    get_availability_for_month,
+    get_promotions_by_property,
     get_properties_by_user,
     get_property_by_id,
     get_property_by_slug,
-    update_property,
-    create_room,
-    get_rooms_by_property,
     get_room_by_id,
+    get_rooms_by_property,
+    get_services_by_property,
+    update_property,
     update_room,
-    delete_room,
+    upsert_availability,
 )
 
 router = APIRouter()
@@ -303,3 +321,236 @@ async def delete_room_route(
 ):
     await delete_room(db, room)
     return RedirectResponse(url=f"/dashboard/properties/{prop.id}/rooms", status_code=303)
+
+
+# ── Services ──────────────────────────────────────────────────────────────────
+
+
+@router.get("/dashboard/properties/{id}/services", response_class=HTMLResponse)
+async def services_list(
+    request: Request,
+    prop: Property = Depends(_get_property_or_404),
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_auth),
+):
+    svcs = await get_services_by_property(db, prop.id)
+    return templates.TemplateResponse(
+        request,
+        "dashboard/properties/services/list.html",
+        {"user": user, "prop": prop, "services": svcs},
+    )
+
+
+@router.post("/dashboard/properties/{id}/services/new")
+async def create_service_route(
+    prop: Property = Depends(_get_property_or_404),
+    name_es: str = Form(...),
+    name_en: str = Form(""),
+    description_es: str = Form(""),
+    price: str = Form("0.00"),
+    is_included: str = Form("0"),
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_auth),
+):
+    try:
+        form = ServiceCreate(
+            name_es=name_es,
+            name_en=name_en,
+            description_es=description_es,
+            price=Decimal(price),
+            is_included=is_included == "1",
+        )
+    except (ValidationError, InvalidOperation):
+        raise HTTPException(status_code=422)
+    await create_service(db, prop.id, form)
+    return RedirectResponse(url=f"/dashboard/properties/{prop.id}/services", status_code=303)
+
+
+@router.post("/dashboard/properties/{id}/services/{sid}/delete")
+async def delete_service_route(
+    sid: uuid.UUID,
+    prop: Property = Depends(_get_property_or_404),
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_auth),
+):
+    result = await db.execute(
+        select(Service).where(Service.id == sid, Service.property_id == prop.id)
+    )
+    svc = result.scalar_one_or_none()
+    if not svc:
+        raise HTTPException(status_code=404)
+    await delete_service_item(db, svc)
+    return RedirectResponse(url=f"/dashboard/properties/{prop.id}/services", status_code=303)
+
+
+# ── Promotions ────────────────────────────────────────────────────────────────
+
+
+@router.get("/dashboard/properties/{id}/promotions", response_class=HTMLResponse)
+async def promotions_list(
+    request: Request,
+    prop: Property = Depends(_get_property_or_404),
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_auth),
+):
+    promos = await get_promotions_by_property(db, prop.id)
+    return templates.TemplateResponse(
+        request,
+        "dashboard/properties/promotions/list.html",
+        {"user": user, "prop": prop, "promotions": promos},
+    )
+
+
+@router.post("/dashboard/properties/{id}/promotions/new")
+async def create_promotion_route(
+    prop: Property = Depends(_get_property_or_404),
+    name_es: str = Form(...),
+    name_en: str = Form(""),
+    discount_type: str = Form(...),
+    discount_value: str = Form(...),
+    valid_from: str = Form(...),
+    valid_until: str = Form(...),
+    min_nights: int = Form(1),
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_auth),
+):
+    try:
+        form = PromotionCreate(
+            name_es=name_es,
+            name_en=name_en,
+            discount_type=discount_type,
+            discount_value=Decimal(discount_value),
+            valid_from=date.fromisoformat(valid_from),
+            valid_until=date.fromisoformat(valid_until),
+            min_nights=min_nights,
+        )
+    except (ValidationError, InvalidOperation, ValueError):
+        raise HTTPException(status_code=422)
+    await create_promotion(db, prop.id, form)
+    return RedirectResponse(url=f"/dashboard/properties/{prop.id}/promotions", status_code=303)
+
+
+@router.post("/dashboard/properties/{id}/promotions/{pid}/delete")
+async def delete_promotion_route(
+    pid: uuid.UUID,
+    prop: Property = Depends(_get_property_or_404),
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_auth),
+):
+    result = await db.execute(
+        select(Promotion).where(Promotion.id == pid, Promotion.property_id == prop.id)
+    )
+    promo = result.scalar_one_or_none()
+    if not promo:
+        raise HTTPException(status_code=404)
+    await delete_promotion(db, promo)
+    return RedirectResponse(url=f"/dashboard/properties/{prop.id}/promotions", status_code=303)
+
+
+# ── Availability ──────────────────────────────────────────────────────────────
+
+
+@router.get("/dashboard/properties/{id}/availability", response_class=HTMLResponse)
+async def availability_page(
+    request: Request,
+    prop: Property = Depends(_get_property_or_404),
+    room_id: uuid.UUID | None = None,
+    year: int | None = None,
+    month: int | None = None,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_auth),
+):
+    today = date.today()
+    if year is None:
+        year = today.year
+    if month is None:
+        month = today.month
+
+    rooms = await get_rooms_by_property(db, prop.id)
+    selected_room_id = room_id or (rooms[0].id if rooms else None)
+
+    calendar_weeks = []
+    blocked_date_set: set[date] = set()
+
+    if selected_room_id:
+        avail_records = await get_availability_for_month(db, selected_room_id, year, month)
+        blocked_date_set = {r.date for r in avail_records if r.is_blocked}
+
+    cal = calendar_module.monthcalendar(year, month)
+    for week in cal:
+        week_days = []
+        for day_num in week:
+            if day_num == 0:
+                week_days.append(None)
+            else:
+                d = date(year, month, day_num)
+                week_days.append({
+                    "day": day_num,
+                    "date_str": d.isoformat(),
+                    "is_blocked": d in blocked_date_set,
+                })
+        calendar_weeks.append(week_days)
+
+    prev_month = month - 1 or 12
+    prev_year = year - 1 if month == 1 else year
+    next_month = month % 12 + 1
+    next_year = year + 1 if month == 12 else year
+
+    month_names = [
+        "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+        "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+    ]
+    month_name = month_names[month - 1]
+
+    return templates.TemplateResponse(
+        request,
+        "dashboard/properties/availability/calendar.html",
+        {
+            "user": user,
+            "prop": prop,
+            "rooms": rooms,
+            "selected_room_id": selected_room_id,
+            "year": year,
+            "month": month,
+            "month_name": month_name,
+            "calendar_weeks": calendar_weeks,
+            "prev_year": prev_year,
+            "prev_month": prev_month,
+            "next_year": next_year,
+            "next_month": next_month,
+        },
+    )
+
+
+@router.post("/dashboard/properties/{id}/availability")
+async def save_availability(
+    request: Request,
+    prop: Property = Depends(_get_property_or_404),
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_auth),
+):
+    form_data = await request.form()
+    room_id_str = form_data.get("room_id")
+    year = int(form_data.get("year", date.today().year))
+    month = int(form_data.get("month", date.today().month))
+
+    if not room_id_str:
+        return RedirectResponse(url=f"/dashboard/properties/{prop.id}/availability", status_code=303)
+
+    room_id = uuid.UUID(str(room_id_str))
+    room = await get_room_by_id(db, room_id)
+    if not room or room.property_id != prop.id:
+        raise HTTPException(status_code=404)
+
+    blocked_dates = set(form_data.getlist("blocked_dates"))
+
+    _, days_in_month = calendar_module.monthrange(year, month)
+    for day in range(1, days_in_month + 1):
+        d = date(year, month, day)
+        is_blocked = d.isoformat() in blocked_dates
+        await upsert_availability(db, room_id, d, is_blocked=is_blocked)
+
+    return RedirectResponse(
+        url=f"/dashboard/properties/{prop.id}/availability?room_id={room_id}&year={year}&month={month}",
+        status_code=303,
+    )
