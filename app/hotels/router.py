@@ -1,4 +1,5 @@
 import uuid
+from decimal import Decimal
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -9,8 +10,8 @@ from app.auth.dependencies import require_auth
 from app.auth.models import User
 from app.core.database import get_db
 from app.core.templates import templates
-from app.hotels.models import Property
-from app.hotels.schemas import PropertyCreate, PropertyUpdate
+from app.hotels.models import Property, Room
+from app.hotels.schemas import PropertyCreate, PropertyUpdate, RoomCreate, RoomUpdate
 from app.hotels.service import (
     create_property,
     delete_property,
@@ -18,6 +19,11 @@ from app.hotels.service import (
     get_property_by_id,
     get_property_by_slug,
     update_property,
+    create_room,
+    get_rooms_by_property,
+    get_room_by_id,
+    update_room,
+    delete_room,
 )
 
 router = APIRouter()
@@ -32,6 +38,17 @@ async def _get_property_or_404(
     if not prop or prop.user_id != user.id:
         raise HTTPException(status_code=404)
     return prop
+
+
+async def _get_room_or_404(
+    rid: uuid.UUID,
+    prop: Property = Depends(_get_property_or_404),
+    db: AsyncSession = Depends(get_db),
+) -> Room:
+    room = await get_room_by_id(db, rid)
+    if not room or room.property_id != prop.id:
+        raise HTTPException(status_code=404)
+    return room
 
 
 # ── Properties ────────────────────────────────────────────────────────────────
@@ -157,3 +174,121 @@ async def delete_property_route(
 ):
     await delete_property(db, prop)
     return RedirectResponse(url="/dashboard/properties", status_code=303)
+
+
+# ── Rooms ─────────────────────────────────────────────────────────────────────
+
+
+@router.get("/dashboard/properties/{id}/rooms", response_class=HTMLResponse)
+async def rooms_list(
+    request: Request,
+    prop: Property = Depends(_get_property_or_404),
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_auth),
+):
+    rooms = await get_rooms_by_property(db, prop.id)
+    return templates.TemplateResponse(
+        request,
+        "dashboard/properties/rooms/list.html",
+        {"user": user, "prop": prop, "rooms": rooms},
+    )
+
+
+@router.get("/dashboard/properties/{id}/rooms/new", response_class=HTMLResponse)
+async def new_room_page(
+    request: Request,
+    prop: Property = Depends(_get_property_or_404),
+    user: User = Depends(require_auth),
+):
+    return templates.TemplateResponse(
+        request,
+        "dashboard/properties/rooms/form.html",
+        {"user": user, "prop": prop, "room": None},
+    )
+
+
+@router.post("/dashboard/properties/{id}/rooms/new", response_class=HTMLResponse)
+async def create_room_route(
+    request: Request,
+    prop: Property = Depends(_get_property_or_404),
+    name_es: str = Form(...),
+    name_en: str = Form(""),
+    description_es: str = Form(""),
+    description_en: str = Form(""),
+    capacity: int = Form(2),
+    base_price: str = Form(...),
+    amenities: str = Form(""),
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_auth),
+):
+    try:
+        form = RoomCreate(
+            name_es=name_es,
+            name_en=name_en,
+            description_es=description_es,
+            description_en=description_en,
+            capacity=capacity,
+            base_price=Decimal(base_price),
+            amenities=[a.strip() for a in amenities.split(",") if a.strip()],
+        )
+    except (ValidationError, Exception) as e:
+        return templates.TemplateResponse(
+            request,
+            "dashboard/properties/rooms/form.html",
+            {"user": user, "prop": prop, "room": None, "error": str(e)},
+            status_code=422,
+        )
+
+    await create_room(db, prop.id, form)
+    return RedirectResponse(url=f"/dashboard/properties/{prop.id}/rooms", status_code=303)
+
+
+@router.get("/dashboard/properties/{id}/rooms/{rid}/edit", response_class=HTMLResponse)
+async def edit_room_page(
+    request: Request,
+    room: Room = Depends(_get_room_or_404),
+    prop: Property = Depends(_get_property_or_404),
+    user: User = Depends(require_auth),
+):
+    return templates.TemplateResponse(
+        request,
+        "dashboard/properties/rooms/form.html",
+        {"user": user, "prop": prop, "room": room},
+    )
+
+
+@router.post("/dashboard/properties/{id}/rooms/{rid}/edit", response_class=HTMLResponse)
+async def update_room_route(
+    request: Request,
+    room: Room = Depends(_get_room_or_404),
+    prop: Property = Depends(_get_property_or_404),
+    name_es: str = Form(None),
+    name_en: str = Form(None),
+    capacity: int = Form(None),
+    base_price: str = Form(None),
+    amenities: str = Form(None),
+    is_active: str = Form(None),
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_auth),
+):
+    form = RoomUpdate(
+        name_es=name_es,
+        name_en=name_en,
+        capacity=capacity,
+        base_price=Decimal(base_price) if base_price else None,
+        amenities=[a.strip() for a in amenities.split(",") if a.strip()] if amenities is not None else None,
+        is_active=None if is_active is None else (is_active == "1"),
+    )
+    await update_room(db, room, form)
+    return RedirectResponse(url=f"/dashboard/properties/{prop.id}/rooms", status_code=303)
+
+
+@router.post("/dashboard/properties/{id}/rooms/{rid}/delete")
+async def delete_room_route(
+    room: Room = Depends(_get_room_or_404),
+    prop: Property = Depends(_get_property_or_404),
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_auth),
+):
+    await delete_room(db, room)
+    return RedirectResponse(url=f"/dashboard/properties/{prop.id}/rooms", status_code=303)

@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Editar' if room else 'Nueva' }} habitación — Sistema Hotel{% endblock %}
+{% block content %}
+<div class="p-8 max-w-xl">
+  <a href="/dashboard/properties/{{ prop.id }}/rooms" class="text-sm text-gray-500 hover:underline">← Habitaciones</a>
+  <h1 class="text-2xl font-bold mt-2 mb-6">{{ 'Editar habitación' if room else 'Nueva habitación' }}</h1>
+  {% if error %}
+  <div class="bg-red-50 border border-red-200 text-red-700 rounded p-3 mb-4 text-sm">{{ error }}</div>
+  {% endif %}
+  <form method="post">
+    <div class="grid grid-cols-2 gap-4 mb-4">
+      <div>
+        <label class="block text-sm font-medium mb-1">Nombre (Español)</label>
+        <input type="text" name="name_es" value="{{ room.name.get('es','') if room else '' }}" required
+               class="w-full border rounded px-3 py-2">
+      </div>
+      <div>
+        <label class="block text-sm font-medium mb-1">Name (English)</label>
+        <input type="text" name="name_en" value="{{ room.name.get('en','') if room else '' }}"
+               class="w-full border rounded px-3 py-2">
+      </div>
+    </div>
+    <div class="grid grid-cols-2 gap-4 mb-4">
+      <div>
+        <label class="block text-sm font-medium mb-1">Capacidad (personas)</label>
+        <input type="number" name="capacity" min="1"
+               value="{{ room.capacity if room else '2' }}"
+               class="w-full border rounded px-3 py-2">
+      </div>
+      <div>
+        <label class="block text-sm font-medium mb-1">Precio base</label>
+        <input type="number" name="base_price" min="0" step="0.01"
+               value="{{ room.base_price if room else '' }}" required
+               class="w-full border rounded px-3 py-2">
+      </div>
+    </div>
+    <div class="mb-6">
+      <label class="block text-sm font-medium mb-1">Amenidades (separadas por comas)</label>
+      <input type="text" name="amenities"
+             value="{{ room.amenities | join(', ') if room else '' }}"
+             placeholder="wifi, ac, tv"
+             class="w-full border rounded px-3 py-2">
+    </div>
+    {% if room %}
+    <div class="mb-6">
+      <label class="flex items-center gap-2 text-sm">
+        <input type="hidden" name="is_active" value="0">
+        <input type="checkbox" name="is_active" value="1" {{ 'checked' if room.is_active else '' }}>
+        Habitación activa
+      </label>
+    </div>
+    {% endif %}
+    <div class="flex gap-3">
+      <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 font-medium">
+        {{ 'Guardar cambios' if room else 'Crear habitación' }}
+      </button>
+      <a href="/dashboard/properties/{{ prop.id }}/rooms" class="text-gray-600 hover:underline self-center text-sm">Cancelar</a>
+    </div>
+  </form>
+  {% if room %}
+  <div class="mt-8 border-t pt-6">
+    <form method="post" action="/dashboard/properties/{{ prop.id }}/rooms/{{ room.id }}/delete"
+          onsubmit="return confirm('¿Eliminar esta habitación?')">
+      <button class="text-red-600 text-sm hover:underline">Eliminar habitación</button>
+    </form>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

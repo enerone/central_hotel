@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Habitaciones — {{ prop.name }} — Sistema Hotel{% endblock %}
+{% block content %}
+<div class="p-8">
+  <div class="flex justify-between items-center mb-6">
+    <div>
+      <a href="/dashboard/properties" class="text-sm text-gray-500 hover:underline">← Propiedades</a>
+      <h1 class="text-2xl font-bold mt-1">Habitaciones — {{ prop.name }}</h1>
+    </div>
+    <a href="/dashboard/properties/{{ prop.id }}/rooms/new"
+       class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm font-medium">
+      + Nueva habitación
+    </a>
+  </div>
+  {% if rooms %}
+  <div class="grid gap-4">
+    {% for room in rooms %}
+    <div class="bg-white rounded-xl shadow p-5 flex justify-between items-start">
+      <div>
+        <h2 class="text-lg font-semibold">{{ room.name.get('es', '') }}</h2>
+        <p class="text-sm text-gray-500">Capacidad: {{ room.capacity }} · Precio base: {{ room.base_price }} {{ prop.currency }}</p>
+        <span class="text-xs {{ 'text-green-600' if room.is_active else 'text-gray-400' }}">
+          {{ 'Activa' if room.is_active else 'Inactiva' }}
+        </span>
+      </div>
+      <div class="flex gap-3 text-sm">
+        <a href="/dashboard/properties/{{ prop.id }}/rooms/{{ room.id }}/edit"
+           class="text-gray-600 hover:underline">Editar</a>
+        <a href="/dashboard/properties/{{ prop.id }}/availability?room_id={{ room.id }}"
+           class="text-blue-600 hover:underline">Disponibilidad</a>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="text-gray-500">No hay habitaciones aún.</p>
+  {% endif %}
+</div>
+{% endblock %}
