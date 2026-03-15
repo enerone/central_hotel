@@ -12,6 +12,7 @@ from app.auth.router import router as auth_router
 from app.core.config import settings
 from app.core.database import AsyncSessionLocal, get_db
 from app.dashboard.router import router as dashboard_router
+from app.hotels.router import router as hotels_router
 
 
 @asynccontextmanager
@@ -39,6 +40,7 @@ async def not_authenticated_handler(request: Request, exc: NotAuthenticated):
 
 app.include_router(auth_router)
 app.include_router(dashboard_router)
+app.include_router(hotels_router)
 
 
 @app.get("/health")

@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Editar' if prop else 'Nueva' }} propiedad — Sistema Hotel{% endblock %}
+{% block content %}
+<div class="p-8 max-w-xl">
+  <h1 class="text-2xl font-bold mb-6">{{ 'Editar propiedad' if prop else 'Nueva propiedad' }}</h1>
+  {% if error %}
+  <div class="bg-red-50 border border-red-200 text-red-700 rounded p-3 mb-4 text-sm">{{ error }}</div>
+  {% endif %}
+  <form method="post">
+    <div class="mb-4">
+      <label class="block text-sm font-medium mb-1">Nombre</label>
+      <input type="text" name="name" value="{{ prop.name if prop else '' }}" required
+             class="w-full border rounded px-3 py-2">
+    </div>
+    {% if not prop %}
+    <div class="mb-4">
+      <label class="block text-sm font-medium mb-1">Slug (URL único)</label>
+      <input type="text" name="slug" placeholder="mi-hotel" required
+             class="w-full border rounded px-3 py-2">
+      <p class="text-xs text-gray-500 mt-1">Solo minúsculas, números y guiones. Mínimo 3 caracteres.</p>
+    </div>
+    {% endif %}
+    <div class="mb-4">
+      <label class="block text-sm font-medium mb-1">Descripción (Español)</label>
+      <textarea name="description_es" rows="2"
+                class="w-full border rounded px-3 py-2">{{ prop.description.get('es', '') if prop else '' }}</textarea>
+    </div>
+    <div class="mb-4">
+      <label class="block text-sm font-medium mb-1">Descripción (English)</label>
+      <textarea name="description_en" rows="2"
+                class="w-full border rounded px-3 py-2">{{ prop.description.get('en', '') if prop else '' }}</textarea>
+    </div>
+    <div class="grid grid-cols-2 gap-4 mb-4">
+      <div>
+        <label class="block text-sm font-medium mb-1">Ciudad</label>
+        <input type="text" name="city" value="{{ prop.city or '' if prop else '' }}"
+               class="w-full border rounded px-3 py-2">
+      </div>
+      <div>
+        <label class="block text-sm font-medium mb-1">País</label>
+        <input type="text" name="country" value="{{ prop.country or '' if prop else '' }}"
+               class="w-full border rounded px-3 py-2">
+      </div>
+    </div>
+    <div class="grid grid-cols-2 gap-4 mb-6">
+      <div>
+        <label class="block text-sm font-medium mb-1">Moneda (USD, ARS…)</label>
+        <input type="text" name="currency" value="{{ prop.currency if prop else 'USD' }}" maxlength="3"
+               class="w-full border rounded px-3 py-2">
+      </div>
+      <div>
+        <label class="block text-sm font-medium mb-1">Idioma (es, en)</label>
+        <input type="text" name="locale" value="{{ prop.locale if prop else 'es' }}"
+               class="w-full border rounded px-3 py-2">
+      </div>
+    </div>
+    {% if prop %}
+    <div class="mb-6">
+      <label class="flex items-center gap-2 text-sm">
+        <input type="checkbox" name="is_published" value="1" {{ 'checked' if prop.is_published else '' }}>
+        Publicar propiedad
+      </label>
+    </div>
+    {% endif %}
+    <div class="flex gap-3">
+      <button type="submit"
+              class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 font-medium">
+        {{ 'Guardar cambios' if prop else 'Crear propiedad' }}
+      </button>
+      <a href="/dashboard/properties" class="text-gray-600 hover:underline self-center text-sm">Cancelar</a>
+    </div>
+  </form>
+  {% if prop %}
+  <div class="mt-8 border-t pt-6">
+    <form method="post" action="/dashboard/properties/{{ prop.id }}/delete"
+          onsubmit="return confirm('¿Eliminar esta propiedad?')">
+      <button class="text-red-600 text-sm hover:underline">Eliminar propiedad</button>
+    </form>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

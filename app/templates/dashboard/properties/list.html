@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Propiedades — Sistema Hotel{% endblock %}
+{% block content %}
+<div class="p-8">
+  <div class="flex justify-between items-center mb-6">
+    <h1 class="text-2xl font-bold">Mis propiedades</h1>
+    <a href="/dashboard/properties/new"
+       class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm font-medium">
+      + Nueva propiedad
+    </a>
+  </div>
+  {% if properties %}
+  <div class="grid gap-4">
+    {% for prop in properties %}
+    <div class="bg-white rounded-xl shadow p-5 flex justify-between items-start">
+      <div>
+        <h2 class="text-lg font-semibold">{{ prop.name }}</h2>
+        <p class="text-sm text-gray-500">{{ prop.slug }} · {{ prop.city or '' }}</p>
+        <span class="text-xs {{ 'text-green-600' if prop.is_published else 'text-gray-400' }}">
+          {{ 'Publicado' if prop.is_published else 'No publicado' }}
+        </span>
+      </div>
+      <div class="flex gap-3 text-sm">
+        <a href="/dashboard/properties/{{ prop.id }}/rooms" class="text-blue-600 hover:underline">Habitaciones</a>
+        <a href="/dashboard/properties/{{ prop.id }}/services" class="text-blue-600 hover:underline">Servicios</a>
+        <a href="/dashboard/properties/{{ prop.id }}/promotions" class="text-blue-600 hover:underline">Promociones</a>
+        <a href="/dashboard/properties/{{ prop.id }}/availability" class="text-blue-600 hover:underline">Disponibilidad</a>
+        <a href="/dashboard/properties/{{ prop.id }}/edit" class="text-gray-600 hover:underline">Editar</a>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="text-gray-500">No tenés propiedades aún. <a href="/dashboard/properties/new" class="text-blue-600 hover:underline">Creá una</a>.</p>
+  {% endif %}
+  <div class="mt-6">
+    <form method="post" action="/logout">
+      <button class="text-sm text-red-600 hover:underline">Cerrar sesión</button>
+    </form>
+  </div>
+</div>
+{% endblock %}
