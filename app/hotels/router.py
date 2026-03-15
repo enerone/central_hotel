@@ -1,5 +1,5 @@
 import uuid
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -231,7 +231,7 @@ async def create_room_route(
             base_price=Decimal(base_price),
             amenities=[a.strip() for a in amenities.split(",") if a.strip()],
         )
-    except (ValidationError, Exception) as e:
+    except (ValidationError, InvalidOperation) as e:
         return templates.TemplateResponse(
             request,
             "dashboard/properties/rooms/form.html",
@@ -271,14 +271,25 @@ async def update_room_route(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(require_auth),
 ):
-    form = RoomUpdate(
-        name_es=name_es,
-        name_en=name_en,
-        capacity=capacity,
-        base_price=Decimal(base_price) if base_price else None,
-        amenities=[a.strip() for a in amenities.split(",") if a.strip()] if amenities is not None else None,
-        is_active=None if is_active is None else (is_active == "1"),
-    )
+    try:
+        form = RoomUpdate(
+            name_es=name_es,
+            name_en=name_en,
+            capacity=capacity,
+            base_price=Decimal(base_price) if base_price else None,
+            amenities=[a.strip() for a in amenities.split(",") if a.strip()] if amenities is not None else None,
+            is_active=None if is_active is None else (is_active == "1"),
+        )
+    except (ValidationError, InvalidOperation) as e:
+        # Need prop for the template — get it from the room's property_id
+        # But we have prop already from the dependency
+        room_obj = room  # room is the Room object from Depends(_get_room_or_404)
+        return templates.TemplateResponse(
+            request,
+            "dashboard/properties/rooms/form.html",
+            {"user": user, "prop": prop, "room": room_obj, "error": str(e)},
+            status_code=422,
+        )
     await update_room(db, room, form)
     return RedirectResponse(url=f"/dashboard/properties/{prop.id}/rooms", status_code=303)
 
