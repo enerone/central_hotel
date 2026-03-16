@@ -8,6 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.billing.service import enforce_property_limit, enforce_room_limit
 from app.hotels.models import Promotion, Property, Room, RoomAvailability, Service
 from app.hotels.schemas import (
     PromotionCreate,
@@ -36,6 +37,7 @@ _DEFAULT_WIDGET_CONFIG = {
 async def create_property(
     db: AsyncSession, user_id: uuid.UUID, form: PropertyCreate
 ) -> Property:
+    await enforce_property_limit(db, user_id)  # raises HTTP 422 if at limit
     prop = Property(
         user_id=user_id,
         slug=form.slug,
@@ -113,6 +115,10 @@ async def delete_property(db: AsyncSession, prop: Property) -> None:
 async def create_room(
     db: AsyncSession, property_id: uuid.UUID, form: RoomCreate
 ) -> Room:
+    prop_result = await db.execute(select(Property).where(Property.id == property_id))
+    prop = prop_result.scalar_one_or_none()
+    if prop:
+        await enforce_room_limit(db, prop.user_id, property_id)
     room = Room(
         property_id=property_id,
         name={"es": form.name_es, "en": form.name_en},
