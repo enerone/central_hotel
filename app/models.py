@@ -7,3 +7,5 @@ from app.auth.models import User  # noqa: F401
 from app.hotels.models import Property, Promotion, Room, RoomAvailability, Service  # noqa: F401
 from app.billing.models import Plan, Subscription  # noqa: F401
 from app.bookings.models import Booking  # noqa: F401
+from app.rentals.models import RentalItem, RentalBooking  # noqa: F401
+from app.amenities.models import AmenityItem, AmenityBooking  # noqa: F401
