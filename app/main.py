@@ -11,6 +11,7 @@ from app.auth.dependencies import NotAuthenticated
 from app.auth.router import router as auth_router
 from app.billing.dependencies import SubscriptionInactive, require_active_subscription
 from app.billing.router import router as billing_router
+from app.bookings.router import router as bookings_router
 from app.core.config import settings
 from app.core.database import AsyncSessionLocal, get_db
 from app.dashboard.router import router as dashboard_router
@@ -58,6 +59,10 @@ app.include_router(
 )
 app.include_router(
     hotels_router,
+    dependencies=[Depends(require_active_subscription)],
+)
+app.include_router(
+    bookings_router,
     dependencies=[Depends(require_active_subscription)],
 )
 

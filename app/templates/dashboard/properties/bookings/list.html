@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block title %}Reservas — {{ prop.name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto py-8 px-4">
+  <div class="flex items-center justify-between mb-6">
+    <h1 class="text-2xl font-bold text-gray-900">Reservas: {{ prop.name }}</h1>
+    <a href="/dashboard/properties/{{ prop.id }}/edit"
+       class="text-sm text-blue-600 hover:underline">
+      &larr; Volver a la propiedad
+    </a>
+  </div>
+
+  {% if not bookings %}
+    <div class="bg-white rounded-lg shadow p-8 text-center text-gray-500">
+      No hay reservas para esta propiedad todavía.
+    </div>
+  {% else %}
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+      <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Huésped</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Check-in</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Check-out</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Pago</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Acciones</th>
+          </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+          {% for booking in bookings %}
+          <tr>
+            <td class="px-4 py-3">
+              <div class="font-medium text-gray-900">{{ booking.guest_name }}</div>
+              <div class="text-sm text-gray-500">{{ booking.guest_email }}</div>
+            </td>
+            <td class="px-4 py-3 text-sm text-gray-700">{{ booking.check_in }}</td>
+            <td class="px-4 py-3 text-sm text-gray-700">{{ booking.check_out }}</td>
+            <td class="px-4 py-3 text-sm text-gray-700">
+              {{ prop.currency }} {{ booking.total_price }}
+            </td>
+            <td class="px-4 py-3">
+              {% if booking.status == "pending" %}
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                  Pendiente
+                </span>
+              {% elif booking.status == "confirmed" %}
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                  Confirmada
+                </span>
+              {% elif booking.status == "canceled" %}
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                  Cancelada
+                </span>
+              {% endif %}
+            </td>
+            <td class="px-4 py-3">
+              {% if booking.payment_status == "unpaid" %}
+                <span class="text-xs text-gray-500">No pagado</span>
+              {% elif booking.payment_status == "paid" %}
+                <span class="text-xs text-green-600 font-medium">Pagado</span>
+              {% elif booking.payment_status == "refunded" %}
+                <span class="text-xs text-purple-600">Reembolsado</span>
+              {% endif %}
+            </td>
+            <td class="px-4 py-3 text-sm space-x-2">
+              {% if booking.status == "pending" %}
+                <form method="POST"
+                      action="/dashboard/properties/{{ prop.id }}/bookings/{{ booking.id }}/confirm"
+                      class="inline">
+                  <button type="submit"
+                          class="text-green-600 hover:text-green-800 font-medium">
+                    Confirmar
+                  </button>
+                </form>
+                <form method="POST"
+                      action="/dashboard/properties/{{ prop.id }}/bookings/{{ booking.id }}/reject"
+                      class="inline">
+                  <button type="submit"
+                          class="text-red-600 hover:text-red-800 font-medium">
+                    Rechazar
+                  </button>
+                </form>
+              {% elif booking.status == "confirmed" %}
+                <form method="POST"
+                      action="/dashboard/properties/{{ prop.id }}/bookings/{{ booking.id }}/cancel"
+                      class="inline">
+                  <button type="submit"
+                          class="text-gray-500 hover:text-red-600 text-xs">
+                    Cancelar
+                  </button>
+                </form>
+              {% else %}
+                <span class="text-gray-400 text-xs">—</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

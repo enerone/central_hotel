@@ -5,8 +5,7 @@ celery_app = Celery(
     "sistemahotel",
     broker=settings.redis_url,
     backend=settings.redis_url,
-    # Task modules are registered here as they are created in later plans.
-    include=[],
+    include=["app.bookings.tasks"],
 )
 
 celery_app.conf.update(

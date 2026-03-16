@@ -31,6 +31,36 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+# ── Webhook helpers ────────────────────────────────────────────────────────────
+
+
+async def handle_payment_intent_succeeded(db: AsyncSession, event_data: dict) -> None:
+    """Handle payment_intent.succeeded: confirm booking and record payment."""
+    from app.bookings.service import get_booking_by_payment_intent
+
+    pi_id: str = event_data.get("id", "")
+    if not pi_id:
+        return
+
+    booking = await get_booking_by_payment_intent(db, pi_id)
+    if booking is None:
+        logger.debug("payment_intent.succeeded: no booking found for pi %s", pi_id)
+        return
+
+    # latest_charge is the Charge ID (ch_...)
+    charge_id: str | None = event_data.get("latest_charge")
+
+    booking.status = "confirmed"
+    booking.payment_status = "paid"
+    booking.stripe_payment_id = charge_id
+    await db.flush()
+    logger.info(
+        "Booking %s confirmed via payment_intent.succeeded (charge %s)",
+        booking.id,
+        charge_id,
+    )
+
+
 # ── Webhook ────────────────────────────────────────────────────────────────────
 
 
@@ -66,6 +96,8 @@ async def stripe_webhook(
         await handle_subscription_deleted(db, data_object)
     elif event_type == "invoice.payment_failed":
         await handle_payment_failed(db, data_object)
+    elif event_type == "payment_intent.succeeded":
+        await handle_payment_intent_succeeded(db, data_object)
     else:
         logger.debug("Unhandled Stripe event type: %s", event_type)
 
