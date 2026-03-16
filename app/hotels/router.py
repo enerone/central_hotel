@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import require_auth
 from app.auth.models import User
+from app.core.config import settings as app_settings
 from app.core.database import get_db
 from app.core.templates import templates
 from app.hotels.models import Promotion, Property, Room, Service
@@ -41,6 +42,7 @@ from app.hotels.service import (
     get_services_by_property,
     update_property,
     update_room,
+    update_widget_config,
     upsert_availability,
 )
 
@@ -553,4 +555,43 @@ async def save_availability(
     return RedirectResponse(
         url=f"/dashboard/properties/{prop.id}/availability?room_id={room_id}&year={year}&month={month}",
         status_code=303,
+    )
+
+
+# ── Widget Config ──────────────────────────────────────────────────────────────
+
+
+@router.get("/dashboard/properties/{id}/widget", response_class=HTMLResponse)
+async def widget_config_page(
+    request: Request,
+    prop: Property = Depends(_get_property_or_404),
+    user: User = Depends(require_auth),
+):
+    base_url = app_settings.base_url
+    return templates.TemplateResponse(
+        request,
+        "dashboard/properties/widget.html",
+        {"user": user, "prop": prop, "base_url": base_url},
+    )
+
+
+@router.post("/dashboard/properties/{id}/widget", response_class=HTMLResponse)
+async def widget_config_save(
+    request: Request,
+    prop: Property = Depends(_get_property_or_404),
+    primary_color: str = Form(default="#3B82F6"),
+    rentals_enabled: str = Form(default="off"),
+    amenities_enabled: str = Form(default="off"),
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_auth),
+):
+    await update_widget_config(
+        db,
+        prop,
+        primary_color=primary_color,
+        rentals_enabled=(rentals_enabled == "on"),
+        amenities_enabled=(amenities_enabled == "on"),
+    )
+    return RedirectResponse(
+        url=f"/dashboard/properties/{prop.id}/widget", status_code=303
     )

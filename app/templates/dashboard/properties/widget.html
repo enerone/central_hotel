@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}Widget — {{ prop.name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto py-8 px-4">
+  <div class="flex items-center justify-between mb-6">
+    <h1 class="text-2xl font-bold text-gray-900">Widget: {{ prop.name }}</h1>
+    <a href="/dashboard/properties/{{ prop.id }}/edit"
+       class="text-sm text-blue-600 hover:underline">&larr; Volver</a>
+  </div>
+
+  <!-- Snippets -->
+  <div class="bg-white rounded-lg shadow p-6 mb-6">
+    <h2 class="text-lg font-semibold mb-4">Código de inserción</h2>
+
+    <div class="mb-4">
+      <p class="text-sm font-medium text-gray-700 mb-1">iframe:</p>
+      <code class="block bg-gray-100 rounded p-3 text-xs break-all">
+        &lt;iframe src="{{ base_url }}/w/{{ prop.slug }}" width="100%" height="700" frameborder="0"&gt;&lt;/iframe&gt;
+      </code>
+    </div>
+
+    <div>
+      <p class="text-sm font-medium text-gray-700 mb-1">JS snippet:</p>
+      <code class="block bg-gray-100 rounded p-3 text-xs break-all">
+        &lt;div id="hotel-widget"&gt;&lt;/div&gt;<br>
+        &lt;script src="{{ base_url }}/w/{{ prop.slug }}/embed.js" data-container="#hotel-widget"&gt;&lt;/script&gt;
+      </code>
+    </div>
+  </div>
+
+  <!-- Config form -->
+  <div class="bg-white rounded-lg shadow p-6">
+    <h2 class="text-lg font-semibold mb-4">Configuración</h2>
+    <form method="POST" action="/dashboard/properties/{{ prop.id }}/widget">
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-gray-700 mb-1">Color principal</label>
+        <input type="color" name="primary_color"
+               value="{{ prop.widget_config.get('primary_color', '#3B82F6') }}"
+               class="h-10 w-20 rounded border border-gray-300">
+      </div>
+
+      <div class="mb-4">
+        <label class="flex items-center gap-2 text-sm text-gray-700">
+          <input type="checkbox" name="rentals_enabled"
+                 {% if prop.widget_config.get('sections', {}).get('rentals', {}).get('enabled') %}checked{% endif %}>
+          Habilitar sección de Alquileres
+        </label>
+      </div>
+
+      <div class="mb-6">
+        <label class="flex items-center gap-2 text-sm text-gray-700">
+          <input type="checkbox" name="amenities_enabled"
+                 {% if prop.widget_config.get('sections', {}).get('amenities', {}).get('enabled') %}checked{% endif %}>
+          Habilitar sección de Amenidades
+        </label>
+      </div>
+
+      <button type="submit"
+              class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded">
+        Guardar configuración
+      </button>
+    </form>
+  </div>
+</div>
+{% endblock %}

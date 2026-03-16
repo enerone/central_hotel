@@ -109,6 +109,26 @@ async def delete_property(db: AsyncSession, prop: Property) -> None:
     await db.flush()
 
 
+async def update_widget_config(
+    db: AsyncSession,
+    prop: Property,
+    primary_color: str,
+    rentals_enabled: bool,
+    amenities_enabled: bool,
+) -> Property:
+    """Update widget_config for a property."""
+    config = copy.deepcopy(prop.widget_config or {})
+    config["primary_color"] = primary_color
+    sections = config.get("sections", {})
+    sections.setdefault("rooms", {})["enabled"] = True  # rooms always enabled
+    sections.setdefault("rentals", {})["enabled"] = rentals_enabled
+    sections.setdefault("amenities", {})["enabled"] = amenities_enabled
+    config["sections"] = sections
+    prop.widget_config = config
+    await db.flush()
+    return prop
+
+
 # ── Room ──────────────────────────────────────────────────────────────────────
 
 
