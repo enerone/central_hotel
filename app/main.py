@@ -9,6 +9,8 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from app.auth.dependencies import NotAuthenticated
 from app.auth.router import router as auth_router
+from app.billing.dependencies import SubscriptionInactive, require_active_subscription
+from app.billing.router import router as billing_router
 from app.core.config import settings
 from app.core.database import AsyncSessionLocal, get_db
 from app.dashboard.router import router as dashboard_router
@@ -38,9 +40,26 @@ async def not_authenticated_handler(request: Request, exc: NotAuthenticated):
     return RedirectResponse(url="/login", status_code=303)
 
 
+@app.exception_handler(SubscriptionInactive)
+async def subscription_inactive_handler(request: Request, exc: SubscriptionInactive):
+    return RedirectResponse(url="/dashboard/billing", status_code=303)
+
+
+# Billing router: no subscription dependency — billing routes always accessible
+app.include_router(billing_router)
+
+# Auth router: no subscription dependency
 app.include_router(auth_router)
-app.include_router(dashboard_router)
-app.include_router(hotels_router)
+
+# Dashboard and hotels routers: require active subscription
+app.include_router(
+    dashboard_router,
+    dependencies=[Depends(require_active_subscription)],
+)
+app.include_router(
+    hotels_router,
+    dependencies=[Depends(require_active_subscription)],
+)
 
 
 @app.get("/health")

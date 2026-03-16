@@ -16,7 +16,7 @@ async def test_register_creates_user_and_redirects(async_client):
         follow_redirects=False,
     )
     assert response.status_code == 303
-    assert response.headers["location"] == "/dashboard"
+    assert response.headers["location"] == "/dashboard/billing"
 
 
 @pytest.mark.asyncio

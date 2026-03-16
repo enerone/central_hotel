@@ -1,5 +1,6 @@
 import pytest
 from tests.auth.factories import make_user
+from tests.billing.helpers import make_active_sub_for_user
 from tests.hotels.factories import make_property
 
 
@@ -7,6 +8,7 @@ async def test_services_list(async_client, db_session):
     user = make_user(email="svc_route@example.com")
     db_session.add(user)
     await db_session.flush()
+    await make_active_sub_for_user(db_session, user.id)
     await async_client.post(
         "/login",
         data={"email": "svc_route@example.com", "password": "password123"},
@@ -26,6 +28,7 @@ async def test_create_service(async_client, db_session):
     user = make_user(email="create_svc@example.com")
     db_session.add(user)
     await db_session.flush()
+    await make_active_sub_for_user(db_session, user.id)
     await async_client.post(
         "/login",
         data={"email": "create_svc@example.com", "password": "password123"},
@@ -48,6 +51,7 @@ async def test_promotions_list(async_client, db_session):
     user = make_user(email="promo_route@example.com")
     db_session.add(user)
     await db_session.flush()
+    await make_active_sub_for_user(db_session, user.id)
     await async_client.post(
         "/login",
         data={"email": "promo_route@example.com", "password": "password123"},
@@ -67,6 +71,7 @@ async def test_create_promotion(async_client, db_session):
     user = make_user(email="create_promo@example.com")
     db_session.add(user)
     await db_session.flush()
+    await make_active_sub_for_user(db_session, user.id)
     await async_client.post(
         "/login",
         data={"email": "create_promo@example.com", "password": "password123"},

@@ -1,6 +1,7 @@
 import pytest
 from decimal import Decimal
 from tests.auth.factories import make_user
+from tests.billing.helpers import make_active_sub_for_user
 from tests.hotels.factories import make_property, make_room
 
 
@@ -8,6 +9,7 @@ async def test_rooms_list_authenticated(async_client, db_session):
     user = make_user(email="rooms_list@example.com")
     db_session.add(user)
     await db_session.flush()
+    await make_active_sub_for_user(db_session, user.id)
     await async_client.post(
         "/login",
         data={"email": "rooms_list@example.com", "password": "password123"},
@@ -27,6 +29,7 @@ async def test_create_room_success(async_client, db_session):
     user = make_user(email="room_create@example.com")
     db_session.add(user)
     await db_session.flush()
+    await make_active_sub_for_user(db_session, user.id, plan_kwargs={"max_rooms": 100})
     await async_client.post(
         "/login",
         data={"email": "room_create@example.com", "password": "password123"},
@@ -55,6 +58,8 @@ async def test_create_room_other_user_property_returns_404(async_client, db_sess
     other = make_user(email="other_rooms@example.com")
     db_session.add_all([owner, other])
     await db_session.flush()
+    await make_active_sub_for_user(db_session, owner.id, plan_kwargs={"id": 9905, "name": "helper_plan_9905"})
+    await make_active_sub_for_user(db_session, other.id, plan_kwargs={"id": 9906, "name": "helper_plan_9906"})
 
     prop = make_property(user_id=owner.id, slug="protected-hotel")
     db_session.add(prop)
@@ -77,6 +82,7 @@ async def test_delete_room(async_client, db_session):
     user = make_user(email="del_room@example.com")
     db_session.add(user)
     await db_session.flush()
+    await make_active_sub_for_user(db_session, user.id)
     await async_client.post(
         "/login",
         data={"email": "del_room@example.com", "password": "password123"},

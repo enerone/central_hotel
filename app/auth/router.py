@@ -59,7 +59,7 @@ async def register(
         )
     user = await create_user(db, form)
     request.session["user_id"] = str(user.id)
-    return RedirectResponse(url="/dashboard", status_code=303)
+    return RedirectResponse(url="/dashboard/billing", status_code=303)
 
 
 @router.get("/login", response_class=HTMLResponse)

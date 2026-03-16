@@ -9,9 +9,11 @@ async def test_dashboard_without_session_redirects_to_login(async_client):
 
 async def test_dashboard_with_valid_session_returns_200(async_client, db_session):
     from tests.auth.factories import make_user
+    from tests.billing.helpers import make_active_sub_for_user
     user = make_user(email="dashuser@example.com")
     db_session.add(user)
     await db_session.flush()
+    await make_active_sub_for_user(db_session, user.id)
 
     # Log in to get a session
     login_response = await async_client.post(

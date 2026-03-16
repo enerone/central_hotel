@@ -1,5 +1,6 @@
 import pytest
 from tests.auth.factories import make_user
+from tests.billing.helpers import make_active_sub_for_user
 from tests.hotels.factories import make_property
 
 
@@ -13,6 +14,7 @@ async def test_properties_list_authenticated(async_client, db_session):
     user = make_user(email="proplist@example.com")
     db_session.add(user)
     await db_session.flush()
+    await make_active_sub_for_user(db_session, user.id)
 
     await async_client.post(
         "/login",
@@ -29,6 +31,7 @@ async def test_create_property_page(async_client, db_session):
     user = make_user(email="newprop@example.com")
     db_session.add(user)
     await db_session.flush()
+    await make_active_sub_for_user(db_session, user.id)
     await async_client.post(
         "/login",
         data={"email": "newprop@example.com", "password": "password123"},
@@ -44,6 +47,7 @@ async def test_create_property_success(async_client, db_session):
     user = make_user(email="createprop@example.com")
     db_session.add(user)
     await db_session.flush()
+    await make_active_sub_for_user(db_session, user.id, plan_kwargs={"max_properties": 10})
     await async_client.post(
         "/login",
         data={"email": "createprop@example.com", "password": "password123"},
@@ -68,6 +72,7 @@ async def test_create_property_invalid_slug(async_client, db_session):
     user = make_user(email="badsluq@example.com")
     db_session.add(user)
     await db_session.flush()
+    await make_active_sub_for_user(db_session, user.id)
     await async_client.post(
         "/login",
         data={"email": "badsluq@example.com", "password": "password123"},
@@ -85,6 +90,7 @@ async def test_edit_property_page(async_client, db_session):
     user = make_user(email="editprop@example.com")
     db_session.add(user)
     await db_session.flush()
+    await make_active_sub_for_user(db_session, user.id)
     await async_client.post(
         "/login",
         data={"email": "editprop@example.com", "password": "password123"},
@@ -104,12 +110,13 @@ async def test_edit_property_other_user_returns_404(async_client, db_session):
     other = make_user(email="other_user@example.com")
     db_session.add_all([owner, other])
     await db_session.flush()
+    await make_active_sub_for_user(db_session, owner.id, plan_kwargs={"id": 9901, "name": "helper_plan_9901"})
+    await make_active_sub_for_user(db_session, other.id, plan_kwargs={"id": 9902, "name": "helper_plan_9902"})
 
     prop = make_property(user_id=owner.id, slug="not-yours")
     db_session.add(prop)
     await db_session.flush()
 
-    # Log in as other user
     await async_client.post(
         "/login",
         data={"email": "other_user@example.com", "password": "password123"},
@@ -124,6 +131,7 @@ async def test_delete_property(async_client, db_session):
     user = make_user(email="delprop@example.com")
     db_session.add(user)
     await db_session.flush()
+    await make_active_sub_for_user(db_session, user.id)
     await async_client.post(
         "/login",
         data={"email": "delprop@example.com", "password": "password123"},
@@ -145,6 +153,7 @@ async def test_update_property_route(async_client, db_session):
     user = make_user(email="update_route@example.com")
     db_session.add(user)
     await db_session.flush()
+    await make_active_sub_for_user(db_session, user.id)
     await async_client.post(
         "/login",
         data={"email": "update_route@example.com", "password": "password123"},
@@ -169,6 +178,8 @@ async def test_update_property_route_other_user_returns_404(async_client, db_ses
     other = make_user(email="other_user2@example.com")
     db_session.add_all([owner, other])
     await db_session.flush()
+    await make_active_sub_for_user(db_session, owner.id, plan_kwargs={"id": 9903, "name": "helper_plan_9903"})
+    await make_active_sub_for_user(db_session, other.id, plan_kwargs={"id": 9904, "name": "helper_plan_9904"})
 
     prop = make_property(user_id=owner.id, slug="not-yours-post")
     db_session.add(prop)

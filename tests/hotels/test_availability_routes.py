@@ -1,4 +1,5 @@
 from tests.auth.factories import make_user
+from tests.billing.helpers import make_active_sub_for_user
 from tests.hotels.factories import make_property, make_room
 
 
@@ -6,6 +7,7 @@ async def test_availability_page_renders(async_client, db_session):
     user = make_user(email="avail_route@example.com")
     db_session.add(user)
     await db_session.flush()
+    await make_active_sub_for_user(db_session, user.id)
     await async_client.post(
         "/login",
         data={"email": "avail_route@example.com", "password": "password123"},
@@ -31,6 +33,7 @@ async def test_availability_page_no_rooms(async_client, db_session):
     user = make_user(email="avail_empty@example.com")
     db_session.add(user)
     await db_session.flush()
+    await make_active_sub_for_user(db_session, user.id)
     await async_client.post(
         "/login",
         data={"email": "avail_empty@example.com", "password": "password123"},
@@ -49,6 +52,7 @@ async def test_save_availability_blocks(async_client, db_session):
     user = make_user(email="avail_save@example.com")
     db_session.add(user)
     await db_session.flush()
+    await make_active_sub_for_user(db_session, user.id)
     await async_client.post(
         "/login",
         data={"email": "avail_save@example.com", "password": "password123"},
