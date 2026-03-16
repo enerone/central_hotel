@@ -5,7 +5,11 @@ celery_app = Celery(
     "sistemahotel",
     broker=settings.redis_url,
     backend=settings.redis_url,
-    include=["app.bookings.tasks"],
+    include=[
+        "app.bookings.tasks",
+        "app.rentals.tasks",
+        "app.amenities.tasks",
+    ],
 )
 
 celery_app.conf.update(
