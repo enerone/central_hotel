@@ -7,6 +7,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.middleware.sessions import SessionMiddleware
 
+from app.amenities.router import router as amenities_router
 from app.auth.dependencies import NotAuthenticated
 from app.auth.router import router as auth_router
 from app.billing.dependencies import SubscriptionInactive, require_active_subscription
@@ -16,6 +17,7 @@ from app.core.config import settings
 from app.core.database import AsyncSessionLocal, get_db
 from app.dashboard.router import router as dashboard_router
 from app.hotels.router import router as hotels_router
+from app.rentals.router import router as rentals_router
 
 
 @asynccontextmanager
@@ -63,6 +65,14 @@ app.include_router(
 )
 app.include_router(
     bookings_router,
+    dependencies=[Depends(require_active_subscription)],
+)
+app.include_router(
+    rentals_router,
+    dependencies=[Depends(require_active_subscription)],
+)
+app.include_router(
+    amenities_router,
     dependencies=[Depends(require_active_subscription)],
 )
 

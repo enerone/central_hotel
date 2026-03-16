@@ -35,30 +35,48 @@ router = APIRouter()
 
 
 async def handle_payment_intent_succeeded(db: AsyncSession, event_data: dict) -> None:
-    """Handle payment_intent.succeeded: confirm booking and record payment."""
+    """Handle payment_intent.succeeded: confirm booking (room, rental, or amenity)."""
     from app.bookings.service import get_booking_by_payment_intent
+    from app.rentals.service import get_rental_booking_by_payment_intent
+    from app.amenities.service import get_amenity_booking_by_payment_intent
 
     pi_id: str = event_data.get("id", "")
     if not pi_id:
         return
 
-    booking = await get_booking_by_payment_intent(db, pi_id)
-    if booking is None:
-        logger.debug("payment_intent.succeeded: no booking found for pi %s", pi_id)
-        return
-
-    # latest_charge is the Charge ID (ch_...)
     charge_id: str | None = event_data.get("latest_charge")
 
-    booking.status = "confirmed"
-    booking.payment_status = "paid"
-    booking.stripe_payment_id = charge_id
-    await db.flush()
-    logger.info(
-        "Booking %s confirmed via payment_intent.succeeded (charge %s)",
-        booking.id,
-        charge_id,
-    )
+    # Try room booking first
+    booking = await get_booking_by_payment_intent(db, pi_id)
+    if booking:
+        booking.status = "confirmed"
+        booking.payment_status = "paid"
+        booking.stripe_payment_id = charge_id
+        await db.flush()
+        logger.info("Room booking %s confirmed via webhook", booking.id)
+        return
+
+    # Try rental booking
+    rental_booking = await get_rental_booking_by_payment_intent(db, pi_id)
+    if rental_booking:
+        rental_booking.status = "confirmed"
+        rental_booking.payment_status = "paid"
+        rental_booking.stripe_payment_id = charge_id
+        await db.flush()
+        logger.info("Rental booking %s confirmed via webhook", rental_booking.id)
+        return
+
+    # Try amenity booking
+    amenity_booking = await get_amenity_booking_by_payment_intent(db, pi_id)
+    if amenity_booking:
+        amenity_booking.status = "confirmed"
+        amenity_booking.payment_status = "paid"
+        amenity_booking.stripe_payment_id = charge_id
+        await db.flush()
+        logger.info("Amenity booking %s confirmed via webhook", amenity_booking.id)
+        return
+
+    logger.debug("payment_intent.succeeded: no booking found for pi %s", pi_id)
 
 
 # ── Webhook ────────────────────────────────────────────────────────────────────
