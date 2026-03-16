@@ -10,6 +10,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from app.amenities.router import router as amenities_router
 from app.auth.dependencies import NotAuthenticated
 from app.auth.router import router as auth_router
+from app.widget.router import router as widget_router
 from app.billing.dependencies import SubscriptionInactive, require_active_subscription
 from app.billing.router import router as billing_router
 from app.bookings.router import router as bookings_router
@@ -47,6 +48,9 @@ async def not_authenticated_handler(request: Request, exc: NotAuthenticated):
 async def subscription_inactive_handler(request: Request, exc: SubscriptionInactive):
     return RedirectResponse(url="/dashboard/billing", status_code=303)
 
+
+# Widget router: public routes, no auth dependency
+app.include_router(widget_router)
 
 # Billing router: no subscription dependency — billing routes always accessible
 app.include_router(billing_router)
